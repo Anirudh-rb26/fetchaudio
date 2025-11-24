@@ -115,7 +115,9 @@ function calculateMetrics(
   predictions: string[],
   groundTruth: string[]
 ): { confusionMatrixData: ConfusionMatrixData; evalMetrics: EvalMetric[] } {
-  const classes = [...new Set([...predictions, ...groundTruth])];
+  const classes = [...new Set([...predictions, ...groundTruth])].sort();
+
+  // Build confusion matrix with CORRECT convention: matrix[actual][predicted]
   const matrix: Record<string, Record<string, number>> = {};
 
   classes.forEach((cls) => {
@@ -123,15 +125,17 @@ function calculateMetrics(
     classes.forEach((c) => (matrix[cls][c] = 0));
   });
 
+  // FIXED: matrix[groundTruth][predicted]++ (was backwards before)
   predictions.forEach((pred, i) => {
-    matrix[pred][groundTruth[i]]++;
+    matrix[groundTruth[i]][pred]++;
   });
 
-  const confusionMatrixData: ConfusionMatrixData = classes.map((cls) => {
-    const row: any = { predicted: cls };
+  // Create confusion matrix data with ACTUAL labels as rows
+  const confusionMatrixData: ConfusionMatrixData = classes.map((actualClass) => {
+    const row: any = { actual: actualClass };
 
-    classes.forEach((c) => {
-      row[c.toLowerCase()] = matrix[cls][c];
+    classes.forEach((predictedClass) => {
+      row[predictedClass.toLowerCase()] = matrix[actualClass][predictedClass];
     });
 
     return row;
@@ -142,12 +146,12 @@ function calculateMetrics(
     totalFN = 0;
 
   classes.forEach((cls) => {
-    const tp = matrix[cls][cls];
-    const fp = Object.keys(matrix[cls]).reduce(
+    const tp = matrix[cls][cls]; // Actually cls, predicted cls
+    const fn = Object.keys(matrix[cls]).reduce(
       (sum, k) => (k !== cls ? sum + matrix[cls][k] : sum),
       0
-    );
-    const fn = classes.reduce((sum, c) => (c !== cls ? sum + matrix[c][cls] : sum), 0);
+    ); // Actually cls, predicted other
+    const fp = classes.reduce((sum, c) => (c !== cls ? sum + matrix[c][cls] : sum), 0); // Actually other, predicted cls
 
     totalTP += tp;
     totalFP += fp;
@@ -171,11 +175,73 @@ function calculateMetrics(
   return { confusionMatrixData, evalMetrics };
 }
 
+// IMPROVED: Better pattern matching for instrument classification
 function extractClass(filename: string): string {
   const lower = filename.toLowerCase();
-  if (lower.includes("drum")) return "drums";
-  if (lower.includes("key") || lower.includes("piano")) return "keys";
-  if (lower.includes("guitar")) return "guitar";
+
+  // Priority order: Check drums first (most specific), then guitar, then keys
+
+  // 1. DRUMS - Check for drum-specific keywords
+  const drumPatterns = [
+    "drum",
+    "_dr_",
+    "kick",
+    "snare",
+    "hihat",
+    "hi-hat",
+    "cymbal",
+    "tom",
+    "rim",
+    "bash",
+    "percussion",
+  ];
+  if (drumPatterns.some((keyword) => lower.includes(keyword))) {
+    return "drums";
+  }
+
+  // 2. GUITAR - Check for guitar-specific keywords
+  const guitarPatterns = [
+    "guitar",
+    "gtr",
+    "_gt_",
+    "strum",
+    "riff",
+    "pluck",
+    "fret",
+    "pickslide",
+    "electric_guitar",
+  ];
+  if (guitarPatterns.some((keyword) => lower.includes(keyword))) {
+    return "guitar";
+  }
+
+  // 3. KEYS/PIANO - Check for keyboard instruments
+  const keysPatterns = ["piano", "key", "keys", "synth", "pad", "organ", "keyboard"];
+  if (keysPatterns.some((keyword) => lower.includes(keyword))) {
+    return "keys";
+  }
+
+  // 4. SPECIAL CASE: "Rock_*" files without guitar/drums are likely keys/chords
+  // Based on your dataset: Rock_BigChords, Rock_DelicateChords, etc.
+  if (lower.startsWith("rock_") && !lower.includes("guitar") && !lower.includes("drum")) {
+    // These are piano/chord progressions
+    console.log(`   ℹ️  Inferring "${filename}" as KEYS (Rock chord progression)`);
+    return "keys";
+  }
+
+  // 5. Additional heuristics for your specific naming convention
+  if (
+    lower.includes("chord") ||
+    lower.includes("intro") ||
+    lower.includes("ballad") ||
+    (lower.includes("rhythm") && !lower.includes("guitar"))
+  ) {
+    console.log(`   ℹ️  Inferring "${filename}" as KEYS (chord/progression file)`);
+    return "keys";
+  }
+
+  // If no match found
+  console.warn(`⚠️  Could not classify file: ${filename} - defaulting to 'unknown'`);
   return "unknown";
 }
 
@@ -400,7 +466,6 @@ export async function createEmbedding(
       console.log(`   - Processing query: "${query}"`);
 
       try {
-        // CRITICAL FIX: Use tokenizer for text input
         const text_inputs = tokenizer([query], { padding: true, truncation: true });
         const { text_embeds } = await textModel(text_inputs);
 
@@ -423,11 +488,47 @@ export async function createEmbedding(
     }
   }
 
-  const reduced = pcaReduce(embeddings);
-  console.log(`🗺️  PCA reduction completed: ${embeddings[0].length}D → 2D`);
+  // Filter out "unknown" samples and warn user
+  const unknownCount = groundTruthLabels.filter((l) => l === "unknown").length;
+  if (unknownCount > 0) {
+    console.warn(`\n⚠️  WARNING: Found ${unknownCount} files with 'unknown' labels!`);
+    console.warn(`   These will be EXCLUDED from evaluation metrics.`);
+    console.warn(`   Please ensure your files have proper names containing:`);
+    console.warn(`   - 'drum', 'kick', 'snare', etc. for drums`);
+    console.warn(`   - 'key', 'piano', 'synth', etc. for keys`);
+    console.warn(`   - 'guitar', 'bass', 'strum', etc. for guitar\n`);
+  }
 
-  console.log("🗺️: Preparing Embedding Points for Visualization");
-  const embeddingPoints: EmbeddingPoint[] = audioFiles.map((file, i) => ({
+  // Filter indices where label is not "unknown"
+  const validIndices = groundTruthLabels
+    .map((label, idx) => (label !== "unknown" ? idx : -1))
+    .filter((idx) => idx !== -1);
+
+  const filteredEmbeddings = validIndices.map((idx) => embeddings[idx]);
+  const filteredLabels = validIndices.map((idx) => groundTruthLabels[idx]);
+  const filteredFiles = validIndices.map((idx) => audioFiles[idx]);
+
+  console.log(`\n📊 Dataset Statistics:`);
+  console.log(`   - Total files: ${audioFiles.length}`);
+  console.log(`   - Valid files: ${filteredFiles.length}`);
+  console.log(`   - Excluded (unknown): ${unknownCount}`);
+
+  const labelCounts: Record<string, number> = {};
+  filteredLabels.forEach((label) => {
+    labelCounts[label] = (labelCounts[label] || 0) + 1;
+  });
+  console.log(`\n   Label distribution:`);
+  Object.entries(labelCounts)
+    .sort()
+    .forEach(([label, count]) => {
+      console.log(`     - ${label}: ${count}`);
+    });
+
+  const reduced = pcaReduce(filteredEmbeddings);
+  console.log(`🗺️  PCA reduction completed: ${filteredEmbeddings[0].length}D → 2D`);
+
+  console.log("\n🗺️: Preparing Embedding Points for Visualization");
+  const embeddingPoints: EmbeddingPoint[] = filteredFiles.map((file, i) => ({
     id: file.id,
     x: reduced[i][0],
     y: reduced[i][1],
@@ -435,23 +536,30 @@ export async function createEmbedding(
     audioSample: file.location,
   }));
 
-  console.log("🔢: Running Predictions!");
-  const predictions = embeddings.map((audioEmbed, idx) => {
+  console.log("\n🔢: Running Predictions!");
+  const predictions = filteredEmbeddings.map((audioEmbed, idx) => {
     const similarities = textEmbeddings.map((textEmbed) => cosineSimilarity(audioEmbed, textEmbed));
     const maxIndex = similarities.indexOf(Math.max(...similarities));
     console.log(
-      `   - ${audioFiles[idx].name}: Predicted="${queries[maxIndex]}", Similarities=[${similarities
-        .map((s) => s.toFixed(3))
-        .join(", ")}]`
+      `   - ${filteredFiles[idx].name}: Predicted="${
+        queries[maxIndex]
+      }", Similarities=[${similarities.map((s) => s.toFixed(3)).join(", ")}]`
     );
     return queries[maxIndex];
   });
 
-  const { confusionMatrixData, evalMetrics } = calculateMetrics(predictions, groundTruthLabels);
+  const { confusionMatrixData, evalMetrics } = calculateMetrics(predictions, filteredLabels);
 
-  console.log(`\n📈 Evaluation Metrics:`);
+  console.log(`\n📈 Evaluation Metrics (excluding unknown samples):`);
   evalMetrics.forEach((metric) => {
     console.log(`   - ${metric.label}: ${metric.value}`);
+  });
+
+  console.log(`\n📊 Confusion Matrix (Rows=Actual, Columns=Predicted):`);
+  confusionMatrixData.forEach((row: any) => {
+    const actual = row.actual;
+    delete row.actual;
+    console.log(`   ${actual}: ${JSON.stringify(row)}`);
   });
 
   return {

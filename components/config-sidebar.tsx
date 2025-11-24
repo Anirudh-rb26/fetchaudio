@@ -47,9 +47,9 @@ const handleCreateEmbeddings = async (
 };
 
 const models = [
-    "LAION/CLAP (HTSAT Fused)",
-    "Microsoft/CLAP",
-    "LAION/AudioCLIP",
+    "laion/larger_clap_music",
+    "laion/clap-htsat-unfused",
+    "laion/larger_clap_general",
 ]
 
 interface ConfigBarProps {
