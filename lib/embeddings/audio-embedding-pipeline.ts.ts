@@ -215,16 +215,12 @@ function extractClass(filename: string): string {
     return "guitar";
   }
 
-  // 3. KEYS/PIANO - Check for keyboard instruments
   const keysPatterns = ["piano", "key", "keys", "synth", "pad", "organ", "keyboard"];
   if (keysPatterns.some((keyword) => lower.includes(keyword))) {
     return "keys";
   }
 
-  // 4. SPECIAL CASE: "Rock_*" files without guitar/drums are likely keys/chords
-  // Based on your dataset: Rock_BigChords, Rock_DelicateChords, etc.
   if (lower.startsWith("rock_") && !lower.includes("guitar") && !lower.includes("drum")) {
-    // These are piano/chord progressions
     console.log(`   ℹ️  Inferring "${filename}" as KEYS (Rock chord progression)`);
     return "keys";
   }

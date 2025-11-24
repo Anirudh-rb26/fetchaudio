@@ -42,7 +42,7 @@ export default function Home() {
   return (
     <div className="flex w-full h-screen items-center justify-center">
       <div className="flex h-full w-[60%] p-2">
-        <ChatSection />
+        <ChatSection currentModel={currentModel!} />
       </div>
       <div className="flex h-full w-[40%] py-4 px-2 shadow-md rounded-md">
         <div className="flex flex-col h-full w-full max-w-full min-w-0 overflow-hidden rounded-md shadow-md">

@@ -1,42 +1,5 @@
-import { createEmbedding } from "@/lib/embeddings/audio-embedding-pipeline.ts";
 import { NextRequest, NextResponse } from "next/server";
-
-// Mock function - replace with your actual implementation
-// async function createEmbedding(
-//   currentModel: string,
-//   audioFiles: AudioFile[]
-// ): Promise<EmbeddingResponse> {
-//   // Simulate long-running process
-//   await new Promise((resolve) => setTimeout(resolve, 2000));
-
-//   // Mock data - replace with actual embedding logic
-//   const embeddingPoints: EmbeddingPoint[] = audioFiles.map((file) => ({
-//     id: file.id,
-//     x: Math.random() * 100,
-//     y: Math.random() * 100,
-//     label: file.name,
-//     audioSample: file.location,
-//   }));
-
-//   const confusionMatrixData: ConfusionMatrixData = [
-//     { predicted: "Keys", keys: 18, drums: 2, guitar: 2 },
-//     { predicted: "Drums", keys: 1, drums: 19, guitar: 2 },
-//     { predicted: "Guitar", keys: 5, drums: 12, guitar: 1 },
-//   ];
-
-//   const evalMetrics: EvalMetric[] = [
-//     { label: "Accuracy", value: 0.92 },
-//     { label: "Precision", value: 0.89 },
-//     { label: "Recall", value: 0.91 },
-//     { label: "F1-Score", value: 0.1 },
-//   ];
-
-//   return {
-//     embeddingPoints,
-//     confusionMatrixData,
-//     evalMetrics,
-//   };
-// }
+import { createEmbedding } from "@/lib/embeddings/audio-embedding-pipeline.ts";
 
 export async function POST(request: NextRequest) {
   try {
