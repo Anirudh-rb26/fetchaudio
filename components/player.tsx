@@ -2,13 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pause, Play } from 'lucide-react';
 import { Button } from './ui/button';
-
-export interface AudioFile {
-    id: string;
-    name: string;
-    duration?: string;
-    location: string;
-}
+import { AudioFile } from '@/lib/types/type';
 
 interface PlayerProps {
     currentId: string;

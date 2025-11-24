@@ -2,13 +2,7 @@
 
 import fs from "fs";
 import path from "path";
-
-export interface AudioFile {
-  id: string;
-  name: string;
-  duration?: string;
-  location: string;
-}
+import { AudioFile } from "@/lib/types/type";
 
 export async function FetchAudio(): Promise<AudioFile[]> {
   try {
@@ -30,7 +24,7 @@ export async function FetchAudio(): Promise<AudioFile[]> {
       .map((file, index) => ({
         id: (index + 1).toString(),
         name: file,
-        location: `/samples/${file}`,
+        location: `/samples/${encodeURIComponent(file)}`,
       }));
 
     return audioFiles;

@@ -1,10 +1,50 @@
 "use client"
 
 import { Button } from './ui/button'
-import React, { useState } from 'react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
-import { Separator } from './ui/separator'
 import AudioFiles from './audio-files'
+import { Separator } from './ui/separator'
+import { AudioFile } from '@/lib/types/type'
+import React, { SetStateAction } from 'react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
+
+const handleCreateEmbeddings = async (
+    currentModel: string | null,
+    audioFiles: AudioFile[],
+    setEmbeddingResponse: React.Dispatch<SetStateAction<string | null>>
+) => {
+    if (!currentModel) {
+        console.error("Cannot create embeddings: No model selected.");
+        return;
+    }
+
+    console.log(`Button Clicked with data: ${currentModel} and audioFiles of length ${audioFiles.length}`);
+
+    try {
+        const response = await fetch('/api/run-embedding', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                currentModel: currentModel,
+                audioFiles: audioFiles,
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`API Error (${response.status}):`, errorText);
+            return;
+        }
+
+        const data = await response.json();
+
+        console.log("Actual Data from API:", data);
+
+        setEmbeddingResponse(JSON.stringify(data));
+
+    } catch (error) {
+        console.error("Network or Parsing Error:", error);
+    }
+};
 
 const models = [
     "LAION/CLAP (HTSAT Fused)",
@@ -12,8 +52,18 @@ const models = [
     "LAION/AudioCLIP",
 ]
 
-const ConfigBar = () => {
-    const [currentModel, setCurrentModel] = useState<string | null>(null);
+interface ConfigBarProps {
+    audioFiles: AudioFile[];
+    currentModel: string | null;
+
+    setCurrentModel: React.Dispatch<SetStateAction<string | null>>;
+    setAudioFiles: React.Dispatch<SetStateAction<AudioFile[]>>
+
+    setEmbeddingResponse: React.Dispatch<SetStateAction<string | null>>
+}
+
+const ConfigBar = ({ audioFiles, setAudioFiles, currentModel, setCurrentModel, setEmbeddingResponse }: ConfigBarProps) => {
+
     return (
         <div className='flex w-full h-full flex-col gap-6 bg-primary-foreground p-4 rounded-md'>
             <div className='flex w-full flex-col items-start'>
@@ -39,9 +89,10 @@ const ConfigBar = () => {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
+                    <Button className='flex w-full items-center justify-center' disabled={currentModel === null} onClick={() => handleCreateEmbeddings(currentModel, audioFiles, setEmbeddingResponse)}>Create Embeddings</Button>
                     <Separator className='mx-2' />
                 </div>
-                <AudioFiles />
+                <AudioFiles audioFiles={audioFiles} setAudioFiles={setAudioFiles} />
             </div>
         </div>
     )

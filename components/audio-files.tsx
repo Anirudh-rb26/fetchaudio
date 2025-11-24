@@ -2,19 +2,12 @@
 
 import { Player } from './player';
 import { Loader2Icon } from 'lucide-react';
-import React, { useEffect, useState } from 'react'
+import { AudioFile } from '@/lib/types/type';
 import { FetchAudio } from '@/services/fetch-audio';
+import React, { SetStateAction, useEffect, useState } from 'react'
 
-export interface AudioFile {
-    id: string;
-    name: string;
-    duration?: string;
-    location: string;
-}
-
-const AudioFiles = () => {
+const AudioFiles = ({ audioFiles, setAudioFiles }: { audioFiles: AudioFile[], setAudioFiles: React.Dispatch<SetStateAction<AudioFile[]>> }) => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
     const [playingId, setPlayingId] = useState<string | null>(null);
 
     const togglePlay = (id: string) => {
@@ -53,7 +46,7 @@ const AudioFiles = () => {
                     ) : (
                         <div className='flex flex-col w-full gap-3 overflow-y-auto'>
                             {/* <ScrollArea className='h-[400px]'> */}
-                            <div className='h-95 overflow-y-auto space-y-2'>
+                            <div className='h-85 overflow-y-auto space-y-2'>
                                 {audioFiles.map((file, index) => {
                                     const currentId = file.id || `file-${index}`;
                                     return (
