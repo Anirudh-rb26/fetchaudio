@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { Button } from './ui/button';
 import { motion } from 'framer-motion';
 import { Pause, Play } from 'lucide-react';
-import { Button } from './ui/button';
 import { AudioFile } from '@/lib/types/type';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface PlayerProps {
     currentId: string;

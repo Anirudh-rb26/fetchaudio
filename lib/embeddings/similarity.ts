@@ -156,7 +156,7 @@ export async function cosineSearch(
     audioFile: {
       id: result.fileName,
       name: result.fileName,
-      location: "", // Location not available from cache
+      location: "",
       duration: undefined,
     },
     similarity: result.similarity,

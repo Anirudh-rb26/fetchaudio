@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import path from "path";
 import fs from "fs/promises";
-import { AudioFile, ConfusionMatrixData, EmbeddingPoint, EvalMetric } from "../types/type";
+import { WaveFile } from "wavefile";
 import {
   AutoProcessor,
   AutoTokenizer,
   ClapAudioModelWithProjection,
   ClapTextModelWithProjection,
 } from "@xenova/transformers";
-import { WaveFile } from "wavefile";
+import { AudioFile, ConfusionMatrixData, EmbeddingPoint, EvalMetric } from "../types/type";
 
 const MODEL_MAP: Record<string, string> = {
   "laion/clap-htsat-unfused": "Xenova/clap-htsat-unfused",
@@ -32,7 +32,6 @@ interface CachedEmbeddings {
   timestamp: number;
 }
 
-// Helper function to ensure cache directory exists
 async function ensureCacheDir() {
   try {
     await fs.mkdir(CACHE_DIR, { recursive: true });
@@ -117,7 +116,6 @@ function calculateMetrics(
 ): { confusionMatrixData: ConfusionMatrixData; evalMetrics: EvalMetric[] } {
   const classes = [...new Set([...predictions, ...groundTruth])].sort();
 
-  // Build confusion matrix with CORRECT convention: matrix[actual][predicted]
   const matrix: Record<string, Record<string, number>> = {};
 
   classes.forEach((cls) => {
@@ -125,12 +123,10 @@ function calculateMetrics(
     classes.forEach((c) => (matrix[cls][c] = 0));
   });
 
-  // FIXED: matrix[groundTruth][predicted]++ (was backwards before)
   predictions.forEach((pred, i) => {
     matrix[groundTruth[i]][pred]++;
   });
 
-  // Create confusion matrix data with ACTUAL labels as rows
   const confusionMatrixData: ConfusionMatrixData = classes.map((actualClass) => {
     const row: any = { actual: actualClass };
 
@@ -146,11 +142,11 @@ function calculateMetrics(
     totalFN = 0;
 
   classes.forEach((cls) => {
-    const tp = matrix[cls][cls]; // Actually cls, predicted cls
+    const tp = matrix[cls][cls];
     const fn = Object.keys(matrix[cls]).reduce(
       (sum, k) => (k !== cls ? sum + matrix[cls][k] : sum),
       0
-    ); // Actually cls, predicted other
+    );
     const fp = classes.reduce((sum, c) => (c !== cls ? sum + matrix[c][cls] : sum), 0); // Actually other, predicted cls
 
     totalTP += tp;
@@ -175,11 +171,8 @@ function calculateMetrics(
   return { confusionMatrixData, evalMetrics };
 }
 
-// IMPROVED: Better pattern matching for instrument classification
 function extractClass(filename: string): string {
   const lower = filename.toLowerCase();
-
-  // Priority order: Check drums first (most specific), then guitar, then keys
 
   // 1. DRUMS - Check for drum-specific keywords
   const drumPatterns = [
@@ -225,7 +218,6 @@ function extractClass(filename: string): string {
     return "keys";
   }
 
-  // 5. Additional heuristics for your specific naming convention
   if (
     lower.includes("chord") ||
     lower.includes("intro") ||
@@ -236,7 +228,6 @@ function extractClass(filename: string): string {
     return "keys";
   }
 
-  // If no match found
   console.warn(`⚠️  Could not classify file: ${filename} - defaulting to 'unknown'`);
   return "unknown";
 }
@@ -248,7 +239,6 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct / (magA * magB);
 }
 
-// Helper function to safely get min/max without stack overflow
 function getArrayStats(arr: Float32Array | Float64Array) {
   let min = Infinity;
   let max = -Infinity;
@@ -484,7 +474,7 @@ export async function createEmbedding(
     }
   }
 
-  // Filter out "unknown" samples and warn user
+  // Filter out "unknown" samples
   const unknownCount = groundTruthLabels.filter((l) => l === "unknown").length;
   if (unknownCount > 0) {
     console.warn(`\n⚠️  WARNING: Found ${unknownCount} files with 'unknown' labels!`);

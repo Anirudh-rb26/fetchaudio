@@ -28,11 +28,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create embeddings" }, { status: 500 });
   }
 }
-
-// Optional: Support GET for testing
-export async function GET() {
-  return NextResponse.json(
-    { message: "Use POST method with currentModel and audioFiles in body" },
-    { status: 405 }
-  );
-}

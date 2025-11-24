@@ -14,7 +14,6 @@ interface EvalBarProps {
     modelName: string;
 }
 
-// Extended type for classified embeddings
 type ClassifiedEmbeddingPoint = EmbeddingPoint & {
     category: string;
     fileName: string;
@@ -67,23 +66,19 @@ const CustomTooltip = ({ active, payload }: any) => {
     return null;
 };
 
-// Helper function to classify audio files by type
 const classifyAudioFile = (filename: string): string => {
     const lower = filename.toLowerCase();
 
-    // Check for drum patterns first (most specific)
     if (lower.includes('drum') || lower.includes('kick') || lower.includes('snare') ||
         lower.includes('tom') || lower.includes('bash') || lower.includes('_dr_') ||
         lower.includes('cds_dr') || lower.includes('rim')) {
         return 'drums';
     }
 
-    // Check for guitar patterns
     if (lower.includes('guitar') || lower.includes('_gt_')) {
         return 'guitar';
     }
 
-    // Everything else is likely keys/piano (Rock_ patterns, etc.)
     return 'keys';
 };
 
@@ -93,8 +88,6 @@ const EvalBar = ({
     metrics,
     modelName,
 }: EvalBarProps) => {
-
-    // Classify embeddings and prepare data
     const classifiedEmbeddings = useMemo(() => {
         if (!embeddings || embeddings.length === 0) return [];
 
@@ -110,7 +103,6 @@ const EvalBar = ({
         });
     }, [embeddings]);
 
-    // Group by class
     const keysData = useMemo(() =>
         classifiedEmbeddings.filter(e => e.category === 'keys'),
         [classifiedEmbeddings]
@@ -126,7 +118,6 @@ const EvalBar = ({
         [classifiedEmbeddings]
     );
 
-    // Normalize confusion matrix to ensure all classes are represented
     const normalizedConfusionMatrix = useMemo(() => {
         if (!confusionMatrix || confusionMatrix.length === 0) return [];
 
@@ -134,14 +125,12 @@ const EvalBar = ({
         return confusionMatrix;
     }, [confusionMatrix]);
 
-    // Check if we have data
     const hasEmbeddings = classifiedEmbeddings.length > 0;
     const hasConfusionMatrix = normalizedConfusionMatrix.length > 0;
     const hasMetrics = metrics && metrics.length > 0;
 
     return (
         <div className='flex flex-col h-full w-full bg-primary-foreground overflow-hidden relative'>
-            {/* HEADER */}
             <div className="p-4">
                 <h2 className="text-lg font-bold">
                     Evaluation Dashboard
@@ -195,7 +184,6 @@ const EvalBar = ({
                             </GlassyCard>
                         </motion.div>
 
-                        {/* CHART 2: Confusion Matrix */}
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="w-full min-w-0">
                             <GlassyCard title="Confusion Matrix" subtitle="Class Separation" className="h-[280px]">
                                 {hasConfusionMatrix ? (
@@ -219,7 +207,6 @@ const EvalBar = ({
                             </GlassyCard>
                         </motion.div>
 
-                        {/* METRICS GRID */}
                         <motion.div
                             className="grid grid-cols-2 lg:grid-cols-2 gap-3 w-full min-w-0"
                             initial={{ opacity: 0 }}

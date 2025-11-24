@@ -5,8 +5,8 @@ import { AudioFile } from "@/lib/types/type";
 import { NextRequest, NextResponse } from "next/server";
 import { cosineSearch } from "@/lib/embeddings/similarity";
 
-export const runtime = "nodejs";
 export const maxDuration = 60;
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,12 +27,10 @@ export async function POST(request: NextRequest) {
 
     console.log(`\n🔍 API Request: Searching for "${prompt}"`);
 
-    // Load audio files metadata if requested
     let audioFiles: AudioFile[] | undefined;
 
     if (includeMetadata !== false) {
       try {
-        // Adjust this path to match your audio files directory
         const audioDir = path.join(process.cwd(), "public", "samples");
         const files = await fs.readdir(audioDir);
 
@@ -42,17 +40,14 @@ export async function POST(request: NextRequest) {
             id: `audio-${idx}`,
             name: file,
             location: `/samples/${file}`,
-            duration: undefined, // You can calculate this if needed
           }));
 
         console.log(`📂 Loaded ${audioFiles.length} audio files from directory`);
       } catch (error) {
         console.warn("⚠️  Could not load audio files directory:", error);
-        // Continue without metadata
       }
     }
 
-    // Perform semantic search
     const results = await cosineSearch(
       prompt,
       model || "laion/larger_clap_music",
@@ -62,7 +57,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Search completed: ${results.length} results found`);
 
-    // Return results
     return NextResponse.json(
       {
         success: true,
@@ -87,14 +81,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * GET /api/search-audio?prompt=drums&topK=3
- *
- * Query parameters:
- * - prompt: Search query (required)
- * - model: CLAP model name (optional)
- * - topK: Number of results (optional)
- */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

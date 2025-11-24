@@ -14,16 +14,13 @@ const AudioFiles = ({ audioFiles, setAudioFiles }: { audioFiles: AudioFile[], se
         setPlayingId(playingId === id ? null : id);
     };
 
-
-    // Fetch in useEffect, but we gate it.
-    // If we already have files (passed from parent or previous fetch), 
-    // we return early. This prevents the lag/refetch.
+    // gated useEffect
     useEffect(() => {
         if (audioFiles.length > 0) {
             return;
         }
 
-        let isMounted = true; // Clean-up flag to prevent setting state on unmounted component
+        let isMounted = true;
 
         async function loadAudioFiles() {
             setIsLoading(true);
@@ -44,11 +41,8 @@ const AudioFiles = ({ audioFiles, setAudioFiles }: { audioFiles: AudioFile[], se
         loadAudioFiles();
 
         return () => { isMounted = false };
-    }, [audioFiles.length, setAudioFiles]); // Only re-run if length changes to 0
+    }, [audioFiles.length, setAudioFiles]);
 
-
-    // This ensures we don't map/process the list on every single render 
-    // (like when you toggle play/pause), improving performance.
     const renderedAudioList = useMemo(() => {
         return audioFiles.map((file, index) => {
             const currentId = file.id || `file-${index}`;

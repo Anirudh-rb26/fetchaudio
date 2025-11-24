@@ -1,17 +1,14 @@
 "use client"
-
-// --- Imports from ChatSection UI and Search Logic ---
-import { Send, Loader2, Play, Pause, Music } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { motion, AnimatePresence } from 'framer-motion';
-import React, { useState, useRef, useEffect } from 'react';
+import { Player } from './player';
 import { Separator } from './ui/separator';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Send, Loader2, Music } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Player } from './player';
+import React, { useState, useRef, useEffect } from 'react';
 
-// --- Interface Definitions (Audio Search) ---
 interface AudioFile {
     id: string;
     name: string;
@@ -25,7 +22,6 @@ interface AudioSearchResult {
     label: string;
 }
 
-
 interface Message {
     id: number | string;
     text: string;
@@ -34,7 +30,6 @@ interface Message {
     results?: AudioSearchResult[];
 }
 
-// --- Audio Search API Call (Now Integrated) ---
 const searchAudio = async (prompt: string, currentModel: string): Promise<AudioSearchResult[]> => {
     try {
         const response = await fetch('/api/search', {
@@ -44,7 +39,7 @@ const searchAudio = async (prompt: string, currentModel: string): Promise<AudioS
             },
             body: JSON.stringify({
                 prompt,
-                model: currentModel, // Default model
+                model: currentModel,
                 topK: 3,
                 includeMetadata: true
             }),
@@ -68,7 +63,6 @@ const searchAudio = async (prompt: string, currentModel: string): Promise<AudioS
     }
 };
 
-// --- ChatSection Component (Fixed with Search Logic) ---
 
 const ChatSection = ({ currentModel }: { currentModel: string }) => {
     const [messages, setMessages] = useState<Message[]>([
@@ -105,7 +99,7 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
         setPlayingId(null); // Stop any currently playing audio
         setError(null);
 
-        // 1. Add user message
+
         const newUserMessage: Message = {
             id: Date.now() * 1000 + 1,
             text: userPrompt,
@@ -118,17 +112,17 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
         setMessages(prevMessages => [...prevMessages, newUserMessage]);
 
         try {
-            // 2. Perform search via API
+            // search via API
             const audioResults = await searchAudio(userPrompt, currentModel);
 
             console.log("audioresult: ", audioResults);
 
-            // 3. Construct assistant content with "cliche" text
+            // assistant content
             const assistantContent = audioResults.length > 0
                 ? `Fantastic query! Here is what I found for **"${userPrompt}"**. I've pinpointed the top ${audioResults.length} most similar samples based on your request. A similar file is listed below—hope it inspires your next track!`
                 : `Hm, I came up empty for **"${userPrompt}"**. The sample library might not contain that exact match. Try adjusting your prompt, like using 'kick drum' instead of 'thump'!`;
 
-            // 4. Add assistant message with results
+            // assistant message with results
             const newAssistantMessage: Message = {
                 id: Date.now() * 1000 + 2,
                 text: assistantContent,
@@ -161,7 +155,7 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
     const handleSend = (): void => {
         if (inputValue.trim() && !isLoading) {
             const currentInput = inputValue;
-            setInputValue(''); // Clear input immediately
+            setInputValue(''); // Clear input
             handleSearch(currentInput);
         }
     };
@@ -173,7 +167,7 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
         }
     };
 
-    // Helper to render text with basic markdown (for bolding)
+    // ender text with basic markdown (for bolding)
     const renderContent = (text: string) => {
         const parts = text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => {
             if (part.startsWith('**') && part.endsWith('**')) {
@@ -190,8 +184,6 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
                 <h1 className="flex items-center gap-2 text-xl font-bold"><Music className="w-5 h-5" /> Audio Search Chat</h1>
                 <Separator className='mt-2' />
             </div>
-
-            {/* Messages Area - Adjusted height for fixed input */}
             <ScrollArea className="flex-1 overflow-y-auto p-4 pb-20">
                 <div className="space-y-4">
                     <AnimatePresence initial={false}>
@@ -214,7 +206,6 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
                                         {renderContent(message.text)}
                                     </div>
 
-                                    {/* Audio Results */}
                                     {message.results && message.results.length > 0 && (
                                         <div className="space-y-2 mt-3">
                                             {message.results.map((result, index) => (
@@ -226,22 +217,15 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
                                                         togglePlay={togglePlay}
                                                         playingId={playingId}
                                                         file={result.audioFile}
-                                                    // similarity={result.similarity}
-                                                    // label={result.label}
                                                     />
                                                 )
                                             ))}
                                         </div>
                                     )}
-
-                                    <span className={`text-xs mt-3 block ${message.type === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
                                 </Card>
                             </motion.div>
                         ))}
 
-                        {/* Loading Indicator */}
                         {isLoading && (
                             <div className="flex justify-start">
                                 <Card className="bg-muted p-3">
@@ -258,8 +242,6 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
                 </div>
             </ScrollArea>
 
-
-            {/* Fixed Input Area at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-primary-foreground">
                 <motion.div
                     className="flex gap-2 items-end"
@@ -270,7 +252,7 @@ const ChatSection = ({ currentModel }: { currentModel: string }) => {
                     <Textarea
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        onKeyPress={handleKeyPress}
+                        onKeyDown={handleKeyPress}
                         placeholder="Search for audio samples (e.g., 'vintage synth pad')"
                         className="flex-1 min-h-10 max-h-[120px] resize-none"
                         rows={1}
