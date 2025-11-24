@@ -4,18 +4,22 @@ import { Button } from './ui/button'
 import AudioFiles from './audio-files'
 import { Separator } from './ui/separator'
 import { AudioFile } from '@/lib/types/type'
-import React, { SetStateAction } from 'react'
+import React, { SetStateAction, useState } from 'react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu'
+import { Loader } from 'lucide-react'
 
 const handleCreateEmbeddings = async (
     currentModel: string | null,
     audioFiles: AudioFile[],
-    setEmbeddingResponse: React.Dispatch<SetStateAction<string | null>>
+    setEmbeddingResponse: React.Dispatch<SetStateAction<string | null>>,
+    setIsLoading: React.Dispatch<SetStateAction<boolean>>,
 ) => {
     if (!currentModel) {
         console.error("Cannot create embeddings: No model selected.");
         return;
     }
+
+    setIsLoading(true);
 
     console.log(`Button Clicked with data: ${currentModel} and audioFiles of length ${audioFiles.length}`);
 
@@ -41,6 +45,8 @@ const handleCreateEmbeddings = async (
 
         setEmbeddingResponse(JSON.stringify(data));
 
+        setIsLoading(false);
+
     } catch (error) {
         console.error("Network or Parsing Error:", error);
     }
@@ -63,6 +69,8 @@ interface ConfigBarProps {
 }
 
 const ConfigBar = ({ audioFiles, setAudioFiles, currentModel, setCurrentModel, setEmbeddingResponse }: ConfigBarProps) => {
+
+    const [isLoading, setIsLoading] = useState(false);
 
     return (
         <div className='flex w-full h-full flex-col gap-6 bg-primary-foreground p-4 rounded-md'>
@@ -89,7 +97,9 @@ const ConfigBar = ({ audioFiles, setAudioFiles, currentModel, setCurrentModel, s
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                    <Button className='flex w-full items-center justify-center' disabled={currentModel === null} onClick={() => handleCreateEmbeddings(currentModel, audioFiles, setEmbeddingResponse)}>Create Embeddings</Button>
+                    <Button className='flex w-full items-center justify-center' disabled={currentModel === null} onClick={() => handleCreateEmbeddings(currentModel, audioFiles, setEmbeddingResponse, setIsLoading)}>
+                        {isLoading ? (<Loader className='animate-spin' />) : "Create Embeddings"}
+                    </Button>
                     <Separator className='mx-2' />
                 </div>
                 <AudioFiles audioFiles={audioFiles} setAudioFiles={setAudioFiles} />
